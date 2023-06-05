@@ -55,5 +55,7 @@ pio = "0.2.1"
 httparse = {version = "1.8", default-features = false}
 rand = { version = "0.8.5", default-features = false }
 
+usbd-hid = "0.6"
+
 [profile.release]
 debug = true

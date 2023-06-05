@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./embassy/examples/rp/Cargo.toml",
+        "./Cargo.toml"
+    ]
+}
