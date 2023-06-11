@@ -37,8 +37,9 @@ async fn main(spawner: Spawner) {
     config.manufacturer = Some("nxyt");
     config.product = Some("Foot Pedal");
     config.serial_number = Some("12345678");
-    config.max_power = 105;
+    config.max_power = 50;
     config.max_packet_size_0 = 64;
+    config.supports_remote_wakeup = true;
 
     let mut device_descriptor = [0; 256];
     let mut config_descriptor = [0; 256];
@@ -62,12 +63,12 @@ async fn main(spawner: Spawner) {
     let config = embassy_usb::class::hid::Config {
         report_descriptor: KeyboardReport::desc(),
         request_handler: Some(&Pedal {}),
-        poll_ms: 60,
+        poll_ms: 200,
         max_packet_size: 64,
     };
     unwrap!(spawner.spawn(led::led_task(p.PIN_20, p.PIN_25)));
 
-    let mut hid = HidReaderWriter::<_, 1, 8>::new(&mut builder, &mut state, config);
+    let mut hid = HidWriter::<_, 8>::new(&mut builder, &mut state, config);
 
     let mut usb = builder.build();
 
@@ -75,11 +76,23 @@ async fn main(spawner: Spawner) {
         hid.ready().await;
         info!("hid ready");
         loop {
-            Timer::after(Duration::from_secs(2)).await;
-
             match hid
                 .write_serialize(&KeyboardReport {
                     keycodes: [4, 0, 0, 0, 0, 0],
+                    leds: 0,
+                    modifier: 0,
+                    reserved: 0,
+                })
+                .await
+            {
+                Ok(e) => info!("Done {}", e),
+                Err(e) => info!("Error: {:?}", e),
+            };
+
+            Timer::after(Duration::from_secs(4)).await;
+            match hid
+                .write_serialize(&KeyboardReport {
+                    keycodes: [7, 0, 0, 0, 0, 0],
                     leds: 0,
                     modifier: 0,
                     reserved: 0,
@@ -94,7 +107,8 @@ async fn main(spawner: Spawner) {
 
     join(
         async {
-            usb.run_until_suspend().await;
+            usb.run().await;
+            info!("usb done");
         },
         write_fut,
     )
